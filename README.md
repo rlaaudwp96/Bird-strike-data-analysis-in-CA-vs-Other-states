@@ -1,0 +1,2 @@
+# Bird-strike-data-analysis-in-CA-vs-Other-states
+Aircraft collision is a cause of death for many bird species and is an important area of research in wildlife conservation and management. It is important to gather and analyze collision data in order to guide best practices in supporting bird conservation. We explore whether certain operators are involved in higher numbers of collisions than other
