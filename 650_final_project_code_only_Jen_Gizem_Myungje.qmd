@@ -1,0 +1,152 @@
+---
+title: "Analysis of Aircraft and Bird Collisions in California vs Other States"
+author: Myungje Kim, Gizem Ozyildirim, Jennifer Soper
+format: pdf
+editor: visual
+echo: TRUE
+message: FALSE
+warning: FALSE
+---
+
+```{r}
+library(openintro)
+library(tidyverse)    
+library(gridExtra)
+```
+
+```{r}
+data("birds")
+```
+
+```{r}
+# new data set of collisions in CA
+collisions_CA <- birds |> filter(state == "CA") 
+
+# table of collision counts by operator in CA - all operators
+operator_summary_CA <- collisions_CA |>
+  group_by(operator)|>
+  summarize(
+    counts = n()
+  ) |>
+  arrange(desc(counts))
+
+# table of top ten operators that have the highest number of collisions in CA
+high_collision_CA <- operator_summary_CA |> filter(counts >= 60 )
+
+```
+
+```{r}
+# bar plot of top ten operators that have the highest number of collisions in CA
+
+op1 <- high_collision_CA |>
+  mutate(operator = fct_rev(fct_infreq(operator, counts))) |>
+  ggplot(aes(x = counts, y = operator)) +
+  geom_col(col = 'white', fill = "lightblue") +
+  labs( x = "Number of Collisions",
+        y = "Aircraft Operator",
+        title = "Number of Collisions by Aircraft Operator\n in CA") +
+  theme_classic()
+```
+
+```{r}
+# table of collision counts by operator in other states
+
+collisions_not_CA <- birds |> filter(state != "CA") # 16669 obs
+
+operator_summary_not_CA <- collisions_not_CA |>
+  group_by(operator)|>
+  summarize(
+    counts = n()
+  ) |>
+  arrange(desc(counts))
+
+# table of top ten operators that have the highest number of collisions in other states
+
+high_collision_not_CA <- operator_summary_not_CA |>
+  filter(counts >= 300 & operator != "CONTINENTAL AIRLINES") # filter gives top 10
+
+```
+
+```{r}
+# bar plot of top ten operators that have the highest number of collisions in other states
+
+op2 <- high_collision_not_CA |>
+  mutate(operator = fct_rev(fct_infreq(operator, counts))) |>
+  ggplot(aes(x = counts, y = operator)) +
+  geom_col(col = 'white', fill = "lightblue") +
+  labs( x = "Number of Collisions",
+        y = "Aircraft Operator",
+        title = "Number of Collisions by Aircraft Operator\nin Other States") +
+  theme_classic()
+
+op1
+op2
+```
+
+```{r}
+# new data set of collisions in CA for phase of flight and time variables
+birds_CA_phase_time <- birds |>
+  select(phase_of_flt, time_of_day, state) |>
+  filter(!is.na(phase_of_flt), !is.na(time_of_day), state == "CA") |>
+  mutate(state2 = if_else(state == "CA", "CA", "Other States"))
+
+# new data set of collisions in other states for phase of flight and time variables
+birds_Otherst_phase_time <- birds |>
+  select(phase_of_flt, time_of_day, state) |>
+  filter(!is.na(phase_of_flt), !is.na(time_of_day), state != "CA") |>
+  mutate(state2 = if_else(state == "CA", "CA", "Other States"))
+```
+
+```{r}
+# bar plot of collison frequency and phase of flight filled by time of day - CA
+plot_1 <- birds_CA_phase_time |>
+  filter(state2 == "CA") |>
+  ggplot(aes(y = fct_rev(fct_infreq(phase_of_flt)), fill = time_of_day)) +
+  geom_bar(show.legend = FALSE, position = position_dodge2(preserve = "single")) +
+  facet_wrap(~state2, ncol = 2) +
+  labs(title = "Collision Frequency\n vs Phase of Flight,\n vs Time of Day in CA",
+       x = "Collision Frequency",
+       y = "Phase Of Flight")
+```
+
+```{r}
+
+# bar plot of collison frequency and phase of flight filled by time of day - other states
+plot_2 <- birds_Otherst_phase_time |>
+  filter(state2 != "CA") |>
+  ggplot(aes(y = fct_rev(fct_infreq(phase_of_flt)), fill = time_of_day)) +
+  geom_bar(show.legend = FALSE, position = position_dodge2(preserve = "single")) +
+  facet_wrap(~state2, ncol = 2) + 
+  labs(title = "Collision Frequency\n vs Phase of Flight\n vs Time of Day in\n Other States",
+       x = "Collision Frequency",
+       y = "") 
+
+  grid.arrange(plot_1, plot_2, ncol = 2)
+```
+
+```{r}
+# new data set of collisions - NAs removed from sky variable
+collisions_CA_sky  <- collisions_CA  |> filter(!is.na(sky))
+collisions_notCA_sky <- collisions_not_CA |> filter(!is.na(sky))
+```
+
+```{r}
+# Sky condition plots
+s1 <- ggplot(collisions_CA_sky, aes(x = sky, fill = sky)) +
+  geom_bar(show.legend = FALSE) +
+  labs(title = "Sky Conditions in CA",
+       x = "Sky", y = "Number of Collisions")
+
+s2 <- ggplot(collisions_notCA_sky, aes(x = sky, fill = sky)) +
+  geom_bar(show.legend = FALSE) +
+  labs(title = "Sky Conditions in \n Other States",
+       x = "Sky", y = "Number of Collisions")
+
+grid.arrange(s1, s2, nrow = 1)
+```
+
+Citations:
+
+grid.arrange - function learned in STAT-630 to arrange plots side by side
+
+position.dodge2 - function pulled from help(geom_bar() -\> position -\> run_example

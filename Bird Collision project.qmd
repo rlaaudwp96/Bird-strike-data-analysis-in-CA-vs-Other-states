@@ -1,0 +1,170 @@
+---
+title: "Analysis of Aircraft and Bird Collisions in California vs Other States"
+author: Myungje Kim, Gizem Ozyildirim, Jennifer Soper
+format: pdf
+editor: visual
+echo: FALSE
+message: FALSE
+warning: FALSE
+---
+
+```{r}
+library(openintro)
+library(tidyverse)    
+library(gridExtra)
+```
+
+```{r}
+data("birds")
+```
+
+## Introduction
+
+Aircraft collision is a cause of death for many bird species and is an important area of research in wildlife conservation and management. It is important to gather and analyze collision data in order to guide best practices in supporting bird conservation. In our data analysis, we explore whether certain aircraft operators are involved in higher numbers of collisions than others. We are interested in if collision numbers differ depending on the phase of flight of the aircraft at impact, and if this relationship varies depending on time of day. We would also like to know if a relationship exists between sky conditions and collisions. In exploring these research topics, we compare data from collisions that occurred in California with data from those that occurred in other states.
+
+## Date Description
+
+We chose to analyze the birds data set from the openintro package. This data set contains information on all aircraft collisions with birds that occurred between 1990 and 1997, and was compiled from all wildlife collision reports made to the US Federal Aviation Administration during this time period. The birds data set contains 19302 observations, with each observation representing one collision, and 17 different variables. We chose to explore five variables, including aircraft operator, phase of flight, time of day, and sky condition. Aircraft operator represents over 200 different airline companies or types of aircraft. Phase of flight describes the location of the plane when the collision occurred, such as when approaching the airport or when taking off. Time of day indicates whether the collision occurred during the day, at night, at dawn, or at dusk. Sky condition is described as having no clouds, some clouds, or as being overcast.
+
+Reporting bird strike data to the US FAA is not required and so any reports are voluntary. Therefore, whether collision numbers are reported to the FAA or not can vary between operators, potentially introducing bias when considering this variable.
+
+## Results
+
+```{r}
+# new data set of collisions in CA
+collisions_CA <- birds |> filter(state == "CA") 
+
+# table of collision counts by operator in CA - all operators
+operator_summary_CA <- collisions_CA |>
+  group_by(operator)|>
+  summarize(
+    counts = n()
+  ) |>
+  arrange(desc(counts))
+
+# table of top ten operators that have the highest number of collisions in CA
+high_collision_CA <- operator_summary_CA |> filter(counts >= 60 )
+
+```
+
+```{r}
+# bar plot of top ten operators that have the highest number of collisions in CA
+
+op1 <- high_collision_CA |>
+  mutate(operator = fct_rev(fct_infreq(operator, counts))) |>
+  ggplot(aes(x = counts, y = operator)) +
+  geom_col(col = 'white', fill = "lightblue") +
+  labs( x = "Number of Collisions",
+        y = "Aircraft Operator",
+        title = "Number of Collisions by Aircraft Operator\n in CA") +
+  theme_classic()
+```
+
+```{r}
+# table of collision counts by operator in other states
+
+collisions_not_CA <- birds |> filter(state != "CA") # 16669 obs
+
+operator_summary_not_CA <- collisions_not_CA |>
+  group_by(operator)|>
+  summarize(
+    counts = n()
+  ) |>
+  arrange(desc(counts))
+
+# table of top ten operators that have the highest number of collisions in other states
+
+high_collision_not_CA <- operator_summary_not_CA |>
+  filter(counts >= 300 & operator != "CONTINENTAL AIRLINES") # filter gives top 10
+
+```
+
+```{r}
+# bar plot of top ten operators that have the highest number of collisions in other states
+
+op2 <- high_collision_not_CA |>
+  mutate(operator = fct_rev(fct_infreq(operator, counts))) |>
+  ggplot(aes(x = counts, y = operator)) +
+  geom_col(col = 'white', fill = "lightblue") +
+  labs( x = "Number of Collisions",
+        y = "Aircraft Operator",
+        title = "Number of Collisions by Aircraft Operator\nin Other States") +
+  theme_classic()
+
+op1
+op2
+```
+
+Considering only the top ten operators with the highest numbers of collisions, our data show that Southwest and American Airlines were responsible for the most collisions in California between 1990 and 1997. When comparing collision data from California to other states, we can see that the operators responsible for the highest numbers of collisions in all states are American Airlines, Southwest Airlines, Delta Airlines, United Airlines, aircrafts used for business purposes, privately owned aircrafts, as well as aircrafts where the operator was unknown. When observing collision data from states other than California, American Airlines similarly has the highest number of collisions, but Southwest drops to having the 6th highest number. This could be due to Southwest having more flights to or from California than other operators, thus having a higher number of collisions in California. Similarly, Southwest could have less flights in other states than other operators, and therefore have less opportunities to be involved in collisions. However, we cannot definitively conclude that these operators collided with birds more often than others, as these companies may have been reporting more often.
+
+##### 
+
+```{r}
+# new data set of collisions in CA for phase of flight and time variables
+birds_CA_phase_time <- birds |>
+  select(phase_of_flt, time_of_day, state) |>
+  filter(!is.na(phase_of_flt), !is.na(time_of_day), state == "CA") |>
+  mutate(state2 = if_else(state == "CA", "CA", "Other States"))
+
+# new data set of collisions in other states for phase of flight and time variables
+birds_Otherst_phase_time <- birds |>
+  select(phase_of_flt, time_of_day, state) |>
+  filter(!is.na(phase_of_flt), !is.na(time_of_day), state != "CA") |>
+  mutate(state2 = if_else(state == "CA", "CA", "Other States"))
+```
+
+```{r}
+# bar plot of collison frequency and phase of flight filled by time of day - CA
+plot_1 <- birds_CA_phase_time |>
+  filter(state2 == "CA") |>
+  ggplot(aes(y = fct_rev(fct_infreq(phase_of_flt)), fill = time_of_day)) +
+  geom_bar(show.legend = FALSE, position = position_dodge2(preserve = "single")) +
+  facet_wrap(~state2, ncol = 2) +
+  labs(title = "Collision Frequency\n vs Phase of Flight,\n vs Time of Day in CA",
+       x = "Collision Frequency",
+       y = "Phase Of Flight")
+```
+
+```{r}
+
+# bar plot of collison frequency and phase of flight filled by time of day - other states
+plot_2 <- birds_Otherst_phase_time |>
+  filter(state2 != "CA") |>
+  ggplot(aes(y = fct_rev(fct_infreq(phase_of_flt)), fill = time_of_day)) +
+  geom_bar(show.legend = FALSE, position = position_dodge2(preserve = "single")) +
+  facet_wrap(~state2, ncol = 2) + 
+  labs(title = "Collision Frequency\n vs Phase of Flight\n vs Time of Day in\n Other States",
+       x = "Collision Frequency",
+       y = "") 
+
+  grid.arrange(plot_1, plot_2, ncol = 2)
+```
+
+This plot compares how birds collisions vary by phase of flight and time of day in California to other states. Green, purple, blue, and red indicate time of the day: day, night, dusk, and dawn, respectively. Most collisions occur during the day, likely because there are more flights and birds are more active at that time. There are more collisions during the night compared to at dawn and dusk due to more flights occurring throughout the night. The approach phase has the highest number of collisions in both groups, since at this phase planes fly at lower altitudes where birds are present. Climb, landing roll, and take-off run phases rank second to fourth, likely because planes rapidly change altitude or move close to the ground during these stages. In contrast, taxi and parked phases have the fewest collisions since planes are stationary or moving slowly.
+
+```{r}
+# new data set of collisions - NAs removed from sky variable
+collisions_CA_sky  <- collisions_CA  |> filter(!is.na(sky))
+collisions_notCA_sky <- collisions_not_CA |> filter(!is.na(sky))
+```
+
+```{r}
+# Sky condition plots
+s1 <- ggplot(collisions_CA_sky, aes(x = sky, fill = sky)) +
+  geom_bar(show.legend = FALSE) +
+  labs(title = "Sky Conditions in CA",
+       x = "Sky", y = "Number of Collisions")
+
+s2 <- ggplot(collisions_notCA_sky, aes(x = sky, fill = sky)) +
+  geom_bar(show.legend = FALSE) +
+  labs(title = "Sky Conditions in \n Other States",
+       x = "Sky", y = "Number of Collisions")
+
+grid.arrange(s1, s2, nrow = 1)
+```
+
+We were also interested in seeing if there is a relationship between sky condition and aircraft collision. In California and all other states, most collisions occur when the sky is not cloudy, followed by sky conditions with some clouds, while the least number of collisions occur when the sky is overcast. Since flights occur regardless of cloud coverage in the sky, it is likely that this trend is due to higher bird activity during clearer skies. Overcast conditions indicate rainy weather, and birds are less likely to be flying when it is raining. Similarly, conditions with some cloud coverage could also indicate weather that birds would prefer not to fly in.
+
+## Conclusion
+
+We have found that certain operators, phases of flight, time of day, and sky conditions are associated with higher numbers of collisions with birds. The results were similar when looking at collisions in California and in other states. The outcome of collisions can include damage to the engine, plane crash, and harm to birds, and so it would be beneficial if operators were able to use a radar system in order to detect birds during their flights. This would help them to avoid birds during any phase of flight, time of day, or sky condition. Airlines with higher collision numbers such as American Airlines and Southwest Airlines should educate their pilots on how to use this system in order to prevent bird fatalities. The FAA should also implement a mandatory reporting system in order to ensure that all bird collisions are reported.
